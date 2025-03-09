@@ -1,5 +1,78 @@
 # Yet another anime game launcher (Yaagl)
 
+## Building on Apple Silicon (M-series) Macs
+
+If you want to build Yaagl yourself on an Apple Silicon Mac, follow these steps to ensure compatibility:
+
+### Prerequisites
+
+1. **Install Node.js and npm**:
+   ```bash
+   # Install Homebrew if you don't have it
+   /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+   
+   # Install Node.js
+   brew install node
+   
+   # Verify installation
+   node --version
+   npm --version
+   ```
+
+2. **Install pnpm**:
+   ```bash
+   npm install -g pnpm
+   ```
+
+### Building Steps
+
+1. **Clone the repository**:
+   ```bash
+   git clone https://github.com/3Shain/yet-another-anime-game-launcher.git
+   cd yet-another-anime-game-launcher
+   ```
+
+2. **Prepare native ARM version of aria2**:
+   ```bash
+   # Make the script executable
+   chmod +x download-arm-aria2.sh
+   
+   # Run the script to download native ARM aria2
+   ./download-arm-aria2.sh
+   ```
+
+3. **Configure the project**:
+   ```bash
+   # Install dependencies
+   pnpm install
+   
+   # Run configuration script
+   ./configure.sh
+   
+   # Update Neutralino
+   pnpm exec neu update
+   ```
+
+4. **Build the app**:
+   ```bash
+   # For Genshin Impact (Global Server)
+   YAAGL_CHANNEL_CLIENT=hk4eos node ./build-app.js
+   
+   # For other games:
+   # YAAGL_CHANNEL_CLIENT=hkrpgos node ./build-app.js  # Honkai Star Rail
+   # YAAGL_CHANNEL_CLIENT=napos node ./build-app.js    # Zenless Zone Zero
+   # YAAGL_CHANNEL_CLIENT=bh3glb node ./build-app.js   # Honkai Impact 3rd
+   ```
+
+5. **Install the app**:
+   - Copy the resulting `.app` file (e.g., `Yaagl OS.app`) to your `/Applications` folder
+
+### Troubleshooting
+
+If you encounter "Failed to load aria2" errors:
+- Make sure you ran the `download-arm-aria2.sh` script before building
+- Alternatively, install aria2 via Homebrew: `brew install aria2`
+
 ## Current Supported Game Version: 
 ### GI: 5.3.0+ OS/CN **
 ### HSR: 3.1.0 OS/CN

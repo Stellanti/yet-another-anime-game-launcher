@@ -1,0 +1,89 @@
+# Yet Another Anime Game Launcher (Yaagl) - Security Analysis and Overview
+
+## Overview of Yaagl
+
+Yaagl is a third-party launcher for several games developed by miHoYo/HoYoverse, designed specifically for macOS. It uses Wine (a compatibility layer for running Windows applications on Unix-like operating systems) to run these Windows-only games on macOS.
+
+### Supported Games:
+1. Genshin Impact (both Chinese and Global versions)
+2. Honkai Star Rail (both Chinese and Global versions)
+3. Zenless Zone Zero (both Chinese and Global versions)
+4. Honkai Impact 3rd (Global version)
+
+### How It Works:
+1. **Wine Integration**: The launcher uses Wine to create a Windows environment on macOS. It manages Wine prefixes and configurations needed to run the games.
+
+2. **Game Management**: It handles downloading, installing, updating, and launching the games. It uses aria2 for downloading game files.
+
+3. **Patching**: The launcher appears to apply patches to the games to make them work on macOS through Wine. This includes modifications to bypass certain anti-cheat mechanisms that would otherwise prevent the games from running.
+
+4. **Host File Modification**: The application modifies the system's hosts file to redirect certain domains (like analytics and telemetry servers) to localhost (0.0.0.0), effectively blocking them.
+
+5. **UI**: It uses SolidJS for the frontend interface, with a modern UI framework (@hope-ui/solid).
+
+## Security Assessment:
+
+After reviewing the codebase, here are my findings regarding potential security concerns:
+
+### Potentially Concerning Elements:
+
+1. **System Modifications**: 
+   - The application modifies your system's hosts file (`/etc/hosts`), which requires administrative privileges. This is used to block certain domains from the games' telemetry and anti-cheat systems.
+   - This is a common practice for game launchers that need to bypass anti-cheat systems, but it does represent a system modification.
+
+2. **Wine Environment**: 
+   - The launcher sets up and manages a Wine environment, which essentially runs Windows code on your Mac. While not inherently malicious, this creates an additional attack surface.
+
+3. **Anti-Cheat Bypassing**: 
+   - The launcher appears to include methods to bypass or disable the games' anti-cheat mechanisms. This is necessary to make the games run on macOS but technically violates the games' terms of service.
+
+4. **Base64 Encoded Secrets**: 
+   - The project uses base64 encoding to obscure some configuration data (in `secret.b64`), but this is primarily to avoid automated takedown notices rather than for security purposes.
+
+### Mitigating Factors:
+
+1. **Open Source**: 
+   - The code is open source and can be reviewed by the community, which reduces the risk of hidden malicious functionality.
+
+2. **Limited Scope**: 
+   - The modifications made by the launcher appear to be limited to what's necessary to run the games on macOS.
+
+3. **No Credential Handling**: 
+   - The launcher doesn't appear to handle or store game account credentials directly, which reduces security risks.
+
+4. **Community Oversight**: 
+   - The project has a Discord community and appears to be actively maintained, suggesting some level of community oversight.
+
+## Conclusion:
+
+Based on my analysis, I don't see evidence of malicious intent in this codebase. The project appears to be a legitimate effort to make these games playable on macOS, which they don't officially support.
+
+However, there are some inherent risks:
+
+1. Using this launcher technically violates the terms of service of these games, as it bypasses anti-cheat mechanisms.
+2. The launcher requires system modifications (hosts file changes) and runs Windows code through Wine, which increases your attack surface.
+3. As with any third-party tool that interacts with online games, there's always a theoretical risk of account bans if the game company decides to take action against users of such tools.
+
+**Recommendation**: If you decide to use this launcher, consider using it with a secondary/test account rather than your main game account, as mentioned in the README's "Is it safe?" section. Also, be aware that it makes system modifications that you may want to revert if you uninstall it (the README includes uninstallation instructions).
+
+## Technical Components:
+
+1. **Frontend**: Built with SolidJS and @hope-ui/solid for the user interface.
+
+2. **Backend**: Uses Neutralino.js as a lightweight framework for desktop applications.
+
+3. **Download Management**: Uses aria2 for efficient downloading of game files.
+
+4. **Patching System**: Includes tools like xdelta and hpatchz for applying patches to game files.
+
+5. **Compression**: Uses 7z for handling compressed game files.
+
+6. **Wine Management**: Custom code to handle Wine prefix creation, configuration, and management.
+
+7. **Game-Specific Clients**: Separate modules for handling different games (Genshin Impact, Honkai Star Rail, Zenless Zone Zero, etc.).
+
+8. **Update System**: Built-in updater for the launcher itself.
+
+9. **Host File Management**: Code to modify the system's hosts file to block certain domains.
+
+10. **Configuration Management**: Persistent storage of user preferences and game settings. 

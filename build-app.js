@@ -8,6 +8,20 @@ const { IconIcns } = require("@shockpkg/icon-encoder");
   const icns = new IconIcns();
   const raw = true;
 
+  // Check if running on Apple Silicon
+  const isAppleSilicon = async () => {
+    try {
+      const { stdout } = await execa("uname", ["-m"]);
+      return stdout.trim() === "arm64";
+    } catch (error) {
+      console.warn("Could not determine architecture, assuming Intel:", error);
+      return false;
+    }
+  };
+  
+  const onAppleSilicon = await isAppleSilicon();
+  console.log(`Building for ${onAppleSilicon ? "Apple Silicon (M-series)" : "Intel"} Mac...`);
+
   await execa("cp", ["neutralino.config.json", "neutralino.config.json.bak"]);
   // build done read neutralino.config.js file
   const config = await fs.readJSON(
@@ -250,9 +264,71 @@ PATH_LAUNCH="$(dirname "$CONTENTS_DIR")" exec "$SCRIPT_DIR/${appname}" --path="$
     `Resources`,
     `sidecar`
   );
-  await fs.copy(path.resolve(process.cwd(), `sidecar`), sidecarDst, {
-    preserveTimestamps: true,
-  });
+  
+  // Handle Apple Silicon compatibility
+  if (onAppleSilicon) {
+    console.log("Ensuring aria2 compatibility for Apple Silicon...");
+    
+    // First, check if we have a native ARM version of aria2 in sidecar/aria2-arm64
+    const hasArmAria2 = fs.existsSync(path.resolve(process.cwd(), 'sidecar/aria2-arm64/aria2c'));
+    
+    if (hasArmAria2) {
+      // Copy everything except aria2 directory first
+      const sidecarDirs = await fs.readdir(path.resolve(process.cwd(), 'sidecar'));
+      for (const dir of sidecarDirs) {
+        if (dir !== 'aria2') {
+          await fs.copy(
+            path.resolve(process.cwd(), 'sidecar', dir), 
+            path.resolve(sidecarDst, dir),
+            { preserveTimestamps: true }
+          );
+        }
+      }
+      
+      // Then copy the ARM version of aria2
+      await fs.copy(
+        path.resolve(process.cwd(), 'sidecar/aria2-arm64'), 
+        path.resolve(sidecarDst, 'aria2'),
+        { preserveTimestamps: true }
+      );
+      
+      console.log("Using native ARM version of aria2");
+    } else {
+      // If no ARM version is available, copy everything and add a script to use system aria2 if available
+      await fs.copy(path.resolve(process.cwd(), `sidecar`), sidecarDst, {
+        preserveTimestamps: true,
+      });
+      
+      // Create a wrapper script for aria2c
+      const wrapperScript = `#!/bin/bash
+# Check if aria2 is installed via Homebrew or elsewhere in the system
+if command -v aria2c &> /dev/null; then
+  # Use system aria2c
+  exec aria2c "$@"
+else
+  # Try to use the bundled aria2c with Rosetta
+  exec "$(dirname "$0")/aria2c.original" "$@"
+fi
+`;
+      
+      // Rename original aria2c
+      await fs.rename(
+        path.resolve(sidecarDst, 'aria2/aria2c'),
+        path.resolve(sidecarDst, 'aria2/aria2c.original')
+      );
+      
+      // Create wrapper script
+      await fs.writeFile(path.resolve(sidecarDst, 'aria2/aria2c'), wrapperScript);
+      await fs.chmod(path.resolve(sidecarDst, 'aria2/aria2c'), 0o755);
+      
+      console.log("Created aria2c wrapper script to use system aria2 if available");
+    }
+  } else {
+    // On Intel, just copy everything as is
+    await fs.copy(path.resolve(process.cwd(), `sidecar`), sidecarDst, {
+      preserveTimestamps: true,
+    });
+  }
 
   (async function getFiles(dir) {
     const dirents = await fs.readdir(dir, { withFileTypes: true });
